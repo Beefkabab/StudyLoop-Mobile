@@ -94,6 +94,7 @@ function TabsContent() {
           tabBarActiveTintColor: "#0284c7",
           tabBarInactiveTintColor: "#64748b",
           headerShown: true,
+          headerStatusBarHeight: 0,
           headerLeft: () => (
             <View style={{ marginLeft: 16 }}>
               <StudyLoopLogo size={24} />
@@ -102,6 +103,7 @@ function TabsContent() {
           headerRight: () => <HeaderAuthButton />,
           headerStyle: {
             backgroundColor: "#ffffff",
+            height: Platform.OS === "ios" ? 92 : undefined,
             elevation: 0,
             shadowOpacity: 0,
             borderBottomWidth: 1,
