@@ -61,7 +61,7 @@ const StudyStoreContext = React.createContext<StudyStoreContextType | null>(null
 export function StudyStoreProvider({ children }: { children: React.ReactNode }) {
   const [userRole, setUserRole] = useState<UserRole>("consumer");
   const [activePI, setActivePI] = useState<PIData | null>(null);
-  const [loginModalVisible, setLoginModalVisible] = useState<boolean>(true);
+  const [loginModalVisible, setLoginModalVisible] = useState<boolean>(false);
   const [loginModalAudience, setLoginModalAudience] = useState<"consumer" | "institution">("consumer");
 
   const openLoginModal = (audience?: "consumer" | "institution") => {
@@ -77,7 +77,7 @@ export function StudyStoreProvider({ children }: { children: React.ReactNode }) 
     setUserRole("consumer");
     setActivePI(null);
     try {
-      router.replace("/(tabs)");
+      router.replace("/");
     } catch (e) {}
   };
 

@@ -12,7 +12,7 @@ import {
   Alert,
 } from "react-native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { useRouter } from "expo-router";
+import { useRouter, useGlobalSearchParams } from "expo-router";
 import { useStudyStore, StudyWithMatch } from "../../hooks/useStudyStore";
 import { DEMO_PERSONAS } from "../../constants/sampleData";
 
@@ -30,6 +30,7 @@ const CATEGORIES: { id: CategoryFilter; label: string; icon: keyof typeof Materi
 
 export default function DiscoverScreen() {
   const router = useRouter();
+  const { study, login } = useGlobalSearchParams<{ study?: string; login?: string }>();
   const {
     activePersonaId,
     currentProfile,
@@ -37,6 +38,7 @@ export default function DiscoverScreen() {
     studies,
     toggleSaveStudy,
     submitApplication,
+    openLoginModal,
   } = useStudyStore();
 
   const [search, setSearch] = useState("");
@@ -45,6 +47,17 @@ export default function DiscoverScreen() {
 
   // Modals
   const [selectedDetailStudy, setSelectedDetailStudy] = useState<StudyWithMatch | null>(null);
+
+  React.useEffect(() => {
+    if (study) {
+      const found = studies.find((s) => s.id === study);
+      if (found) setSelectedDetailStudy(found);
+    }
+    if (login) {
+      setSelectedDetailStudy(null);
+      openLoginModal(login === "pi" ? "institution" : "consumer");
+    }
+  }, [study, login, studies]);
   const [screenerStudy, setScreenerStudy] = useState<StudyWithMatch | null>(null);
   const [screenerAnswers, setScreenerAnswers] = useState<Record<string, string>>({});
   const [screenerResult, setScreenerResult] = useState<{ passed: boolean; disqualifications: string[] } | null>(null);
@@ -118,48 +131,20 @@ export default function DiscoverScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Active Persona Floating Status Bar */}
-      <View style={styles.personaBar}>
-        <TouchableOpacity
-          style={styles.personaBarLeft}
-          onPress={() => setPersonaSheetOpen(true)}
-          activeOpacity={0.8}
-        >
-          <View style={styles.personaMiniAvatar}>
-            <Text style={styles.personaMiniAvatarText}>{currentProfile.avatarInitials}</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-              <Text style={styles.personaBarTitle}>{currentProfile.fullName}</Text>
-              <View style={styles.matchingPill}>
-                <Text style={styles.matchingPillText}>Matching Active</Text>
-              </View>
-            </View>
-            <Text style={styles.personaBarSubtitle} numberOfLines={1}>
-              {currentProfile.isHealthyVolunteer ? "Healthy Volunteer" : "Diagnosed Context"} • {currentProfile.city}, {currentProfile.state} • {currentProfile.livingEnvironment}
-            </Text>
-          </View>
-          <View style={styles.switchPill}>
-            <MaterialIcons name="swap-vert" size={14} color="#0284c7" />
-            <Text style={styles.switchPillText}>Switch</Text>
-          </View>
-        </TouchableOpacity>
-      </View>
-
-      {/* Search Input */}
+      {/* Modern Search Input */}
       <View style={styles.searchContainer}>
         <View style={styles.searchBox}>
-          <MaterialIcons name="search" size={20} color="#94a3b8" />
+          <MaterialIcons name="search" size={17} color="#94a3b8" />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search clinical trials, pay, location..."
+            placeholder="Search trials, condition, location..."
             placeholderTextColor="#94a3b8"
             value={search}
             onChangeText={setSearch}
           />
           {search.length > 0 && (
-            <TouchableOpacity onPress={() => setSearch("")}>
-              <MaterialIcons name="close" size={18} color="#94a3b8" />
+            <TouchableOpacity onPress={() => setSearch("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <MaterialIcons name="close" size={16} color="#94a3b8" />
             </TouchableOpacity>
           )}
         </View>
@@ -179,11 +164,11 @@ export default function DiscoverScreen() {
                 key={cat.id}
                 style={[styles.categoryChip, isSelected && styles.categoryChipActive]}
                 onPress={() => setSelectedCategory(cat.id)}
-                activeOpacity={0.8}
+                activeOpacity={0.75}
               >
                 <MaterialIcons
                   name={cat.icon}
-                  size={14}
+                  size={13}
                   color={isSelected ? "#ffffff" : "#64748b"}
                 />
                 <Text style={[styles.categoryChipText, isSelected && styles.categoryChipTextActive]}>
@@ -204,10 +189,7 @@ export default function DiscoverScreen() {
         ListHeaderComponent={
           <View style={styles.listHeader}>
             <Text style={styles.listHeaderTitle}>
-              {filteredStudies.length} Research Opportunities
-            </Text>
-            <Text style={styles.listHeaderSubtitle}>
-              Ranked by personalized compatibility with your profile
+              {filteredStudies.length} matching studies near {currentProfile.city}, {currentProfile.state}
             </Text>
           </View>
         }
@@ -216,33 +198,23 @@ export default function DiscoverScreen() {
           const isSky = item.match.score >= 70 && item.match.score < 90;
 
           return (
-            <View style={styles.studyCard}>
-              {/* Card Top: Category Tag + Bookmark + Match Badge */}
+            <TouchableOpacity
+              style={styles.studyCard}
+              onPress={() => setSelectedDetailStudy(item)}
+              activeOpacity={0.88}
+            >
+              {/* Header row: Study Type + Match Score Pill + Bookmark */}
               <View style={styles.cardHeader}>
                 <View style={styles.cardBadgeRow}>
-                  <View style={styles.studyTypeTag}>
-                    <Text style={styles.studyTypeTagText}>
-                      {item.studyType.replace(/_/g, " ").toUpperCase()}
-                    </Text>
-                  </View>
+                  <Text style={styles.studyTypeTagText}>
+                    {item.studyType.replace(/_/g, " ").toUpperCase()}
+                  </Text>
                   {item.locationType === "remote" && (
-                    <View style={styles.remoteTag}>
-                      <Text style={styles.remoteTagText}>100% REMOTE</Text>
-                    </View>
+                    <Text style={styles.remoteTagText}>• REMOTE</Text>
                   )}
                 </View>
 
                 <View style={styles.cardHeaderActions}>
-                  <TouchableOpacity
-                    style={styles.bookmarkBtn}
-                    onPress={() => toggleSaveStudy(item.id)}
-                  >
-                    <MaterialIcons
-                      name={item.isSaved ? "bookmark" : "bookmark-border"}
-                      size={20}
-                      color={item.isSaved ? "#0284c7" : "#94a3b8"}
-                    />
-                  </TouchableOpacity>
                   <View
                     style={[
                       styles.matchBadge,
@@ -253,6 +225,11 @@ export default function DiscoverScreen() {
                         : styles.matchBadgeSlate,
                     ]}
                   >
+                    <MaterialIcons
+                      name="auto-awesome"
+                      size={10}
+                      color={isEmerald ? "#059669" : isSky ? "#0284c7" : "#64748b"}
+                    />
                     <Text
                       style={[
                         styles.matchBadgeScore,
@@ -263,110 +240,51 @@ export default function DiscoverScreen() {
                           : styles.matchBadgeScoreSlate,
                       ]}
                     >
-                      {item.match.score}%
-                    </Text>
-                    <Text
-                      style={[
-                        styles.matchBadgeLabel,
-                        isEmerald
-                          ? styles.matchBadgeLabelEmerald
-                          : isSky
-                          ? styles.matchBadgeLabelSky
-                          : styles.matchBadgeLabelSlate,
-                      ]}
-                    >
-                      MATCH
+                      {item.match.score}% Match
                     </Text>
                   </View>
+
+                  <TouchableOpacity
+                    style={styles.bookmarkBtn}
+                    onPress={() => toggleSaveStudy(item.id)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <MaterialIcons
+                      name={item.isSaved ? "bookmark" : "bookmark-border"}
+                      size={18}
+                      color={item.isSaved ? "#0284c7" : "#94a3b8"}
+                    />
+                  </TouchableOpacity>
                 </View>
               </View>
 
-              {/* Title & Sponsor */}
-              <Text style={styles.studyTitle}>{item.title}</Text>
-              <View style={styles.sponsorRow}>
-                <MaterialIcons name="domain" size={13} color="#64748b" />
-                <Text style={styles.sponsorText}>{item.sponsorName}</Text>
-              </View>
+              {/* Title */}
+              <Text style={styles.studyTitle} numberOfLines={2}>{item.title}</Text>
 
-              {/* Teaser Summary */}
-              <Text style={styles.studySummary} numberOfLines={2}>
-                {item.summary}
+              {/* Facility & Location */}
+              <Text style={styles.sponsorText} numberOfLines={1}>
+                {item.sponsorName} • {item.city}, {item.state}
               </Text>
 
-              {/* 3-Column Metric Box */}
-              <View style={styles.metricGrid}>
-                <View style={styles.metricCol}>
-                  <View style={styles.metricLabelRow}>
-                    <MaterialIcons name="monetization-on" size={13} color="#0284c7" />
-                    <Text style={styles.metricLabel}>Compensation</Text>
-                  </View>
-                  <Text style={styles.metricValue}>${item.compensationAmount}</Text>
-                  <Text style={styles.metricSub}>{item.compensationType}</Text>
-                </View>
-
-                <View style={styles.metricDivider} />
-
-                <View style={styles.metricCol}>
-                  <View style={styles.metricLabelRow}>
-                    <MaterialIcons name="schedule" size={13} color="#0284c7" />
-                    <Text style={styles.metricLabel}>Visits / Time</Text>
-                  </View>
-                  <Text style={styles.metricValue} numberOfLines={1}>{item.timeCommitment.split(" (")[0]}</Text>
-                  <Text style={styles.metricSub}>{item.durationWeeks} wk duration</Text>
-                </View>
-
-                <View style={styles.metricDivider} />
-
-                <View style={styles.metricCol}>
-                  <View style={styles.metricLabelRow}>
-                    <MaterialIcons name="place" size={13} color="#0284c7" />
-                    <Text style={styles.metricLabel}>Location</Text>
-                  </View>
-                  <Text style={styles.metricValue} numberOfLines={1}>{item.city}, {item.state}</Text>
-                  <Text style={styles.metricSub}>{item.locationType === "remote" ? "Participate Home" : "On-Site"}</Text>
-                </View>
+              {/* Clean Typographic Metrics Line (No nested box!) */}
+              <View style={styles.metricsRow}>
+                <Text style={styles.metricsPay}>${item.compensationAmount}</Text>
+                <Text style={styles.metricsDot}>•</Text>
+                <Text style={styles.metricsDetail}>{item.timeCommitment.split(" (")[0]}</Text>
+                <Text style={styles.metricsDot}>•</Text>
+                <Text style={styles.metricsDetail}>{item.locationType === "remote" ? "From Home" : "On-Site"}</Text>
               </View>
 
-              {/* Dynamic Why You Matched Insight Box */}
-              <View style={styles.matchReasonsBox}>
-                <View style={styles.matchReasonHeader}>
-                  <MaterialIcons name="insights" size={13} color="#0284c7" />
-                  <Text style={styles.matchReasonTitle}>Why You Matched:</Text>
+              {/* Clean Single-line Match Check (No nested green box!) */}
+              {item.match.matchReasons.length > 0 && (
+                <View style={styles.matchLine}>
+                  <MaterialIcons name="check" size={13} color="#059669" />
+                  <Text style={styles.matchLineText} numberOfLines={1}>
+                    {item.match.matchReasons[0]}
+                  </Text>
                 </View>
-                {item.match.matchReasons.map((reason, idx) => (
-                  <View key={idx} style={styles.reasonBulletRow}>
-                    <MaterialIcons name="check" size={12} color="#16a34a" />
-                    <Text style={styles.reasonBulletText}>{reason}</Text>
-                  </View>
-                ))}
-                {item.match.flags.map((flag, idx) => (
-                  <View key={`flag_${idx}`} style={styles.reasonBulletRow}>
-                    <MaterialIcons name="info-outline" size={12} color="#f59e0b" />
-                    <Text style={styles.flagBulletText}>{flag}</Text>
-                  </View>
-                ))}
-              </View>
-
-              {/* Bottom Action CTAs */}
-              <View style={styles.cardActionsRow}>
-                <TouchableOpacity
-                  style={styles.detailsBtn}
-                  onPress={() => setSelectedDetailStudy(item)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.detailsBtnText}>View Protocol</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.applyBtn}
-                  onPress={() => handleOpenScreener(item)}
-                  activeOpacity={0.85}
-                >
-                  <Text style={styles.applyBtnText}>2-Min Screener</Text>
-                  <MaterialIcons name="arrow-forward" size={15} color="#ffffff" />
-                </TouchableOpacity>
-              </View>
-            </View>
+              )}
+            </TouchableOpacity>
           );
         }}
       />
@@ -627,63 +545,30 @@ export default function DiscoverScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#f8fafc" },
 
-  personaBar: {
-    backgroundColor: "#ffffff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e2e8f0",
+  searchContainer: {
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingTop: 8,
+    paddingBottom: 8,
+    backgroundColor: "#f8fafc",
   },
-  personaBarLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
-  personaMiniAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#0284c7",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  personaMiniAvatarText: { color: "#ffffff", fontSize: 13, fontWeight: "800" },
-  personaBarTitle: { fontSize: 14, fontWeight: "800", color: "#0f172a" },
-  matchingPill: {
-    backgroundColor: "#ecfdf5",
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#a7f3d0",
-  },
-  matchingPillText: { fontSize: 9, fontWeight: "800", color: "#059669" },
-  personaBarSubtitle: { fontSize: 11, color: "#64748b", marginTop: 1 },
-  switchPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-    backgroundColor: "#f0f9ff",
-    borderWidth: 1,
-    borderColor: "#bae6fd",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  switchPillText: { fontSize: 11, fontWeight: "700", color: "#0284c7" },
-
-  searchContainer: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 6 },
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#ffffff",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#cbd5e1",
+    borderColor: "#e2e8f0",
     paddingHorizontal: 12,
-    paddingVertical: 9,
+    paddingVertical: 7,
     gap: 8,
   },
   searchInput: { flex: 1, fontSize: 13, color: "#0f172a", fontWeight: "500" },
 
-  categoryScrollWrapper: { borderBottomWidth: 1, borderBottomColor: "#f1f5f9", paddingBottom: 8 },
-  categoryScroll: { paddingHorizontal: 16, gap: 8 },
+  categoryScrollWrapper: {
+    backgroundColor: "#f8fafc",
+    paddingBottom: 6,
+  },
+  categoryScroll: { paddingHorizontal: 16, gap: 6 },
   categoryChip: {
     flexDirection: "row",
     alignItems: "center",
@@ -691,126 +576,118 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     borderWidth: 1,
     borderColor: "#e2e8f0",
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 20,
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+    borderRadius: 14,
   },
   categoryChipActive: { backgroundColor: "#0284c7", borderColor: "#0284c7" },
-  categoryChipText: { fontSize: 12, fontWeight: "600", color: "#475569" },
+  categoryChipText: { fontSize: 12, fontWeight: "600", color: "#64748b" },
   categoryChipTextActive: { color: "#ffffff", fontWeight: "700" },
 
-  listContainer: { padding: 16, paddingBottom: 30 },
-  listHeader: { marginBottom: 12 },
-  listHeaderTitle: { fontSize: 16, fontWeight: "800", color: "#0f172a" },
-  listHeaderSubtitle: { fontSize: 12, color: "#64748b", marginTop: 2 },
+  listContainer: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 24 },
+  listHeader: { marginBottom: 8, paddingHorizontal: 2 },
+  listHeaderTitle: { fontSize: 12, fontWeight: "600", color: "#64748b" },
 
   studyCard: {
     backgroundColor: "#ffffff",
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     borderWidth: 1,
     borderColor: "#e2e8f0",
+    marginBottom: 10,
     shadowColor: "#0f172a",
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    marginBottom: 16,
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
   },
-  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 },
-  cardBadgeRow: { flexDirection: "row", gap: 6, flexWrap: "wrap", flex: 1, paddingRight: 8 },
-  studyTypeTag: {
-    backgroundColor: "#f1f5f9",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  studyTypeTagText: { fontSize: 9, fontWeight: "800", color: "#475569", letterSpacing: 0.3 },
-  remoteTag: {
-    backgroundColor: "#eff6ff",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#bfdbfe",
-  },
-  remoteTagText: { fontSize: 9, fontWeight: "800", color: "#1d4ed8" },
-  cardHeaderActions: { flexDirection: "row", alignItems: "center", gap: 8 },
-  bookmarkBtn: { padding: 4 },
-  matchBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
+    marginBottom: 6,
   },
-  matchBadgeEmerald: { backgroundColor: "#ecfdf5", borderWidth: 1, borderColor: "#a7f3d0" },
-  matchBadgeSky: { backgroundColor: "#f0f9ff", borderWidth: 1, borderColor: "#bae6fd" },
-  matchBadgeSlate: { backgroundColor: "#f8fafc", borderWidth: 1, borderColor: "#e2e8f0" },
-  matchBadgeScore: { fontSize: 13, fontWeight: "900" },
+  cardBadgeRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+  studyTypeTagText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#64748b",
+    letterSpacing: 0.4,
+  },
+  remoteTagText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#0284c7",
+    letterSpacing: 0.4,
+  },
+  cardHeaderActions: { flexDirection: "row", alignItems: "center", gap: 6 },
+  bookmarkBtn: { padding: 2 },
+  matchBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: 10,
+  },
+  matchBadgeEmerald: { backgroundColor: "#ecfdf5" },
+  matchBadgeSky: { backgroundColor: "#f0f9ff" },
+  matchBadgeSlate: { backgroundColor: "#f1f5f9" },
+  matchBadgeScore: { fontSize: 11, fontWeight: "700" },
   matchBadgeScoreEmerald: { color: "#059669" },
   matchBadgeScoreSky: { color: "#0284c7" },
   matchBadgeScoreSlate: { color: "#64748b" },
-  matchBadgeLabel: { fontSize: 8, fontWeight: "800" },
-  matchBadgeLabelEmerald: { color: "#047857" },
-  matchBadgeLabelSky: { color: "#0369a1" },
-  matchBadgeLabelSlate: { color: "#64748b" },
 
-  studyTitle: { fontSize: 16, fontWeight: "800", color: "#0f172a", lineHeight: 21 },
-  sponsorRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4, marginBottom: 8 },
-  sponsorText: { fontSize: 12, color: "#64748b", fontWeight: "600" },
-  studySummary: { fontSize: 12, color: "#475569", lineHeight: 17, marginBottom: 12 },
-
-  metricGrid: {
-    flexDirection: "row",
-    backgroundColor: "#f8fafc",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#f1f5f9",
-    padding: 10,
-    marginBottom: 12,
+  studyTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#0f172a",
+    lineHeight: 20,
+    marginBottom: 2,
   },
-  metricCol: { flex: 1 },
-  metricDivider: { width: 1, backgroundColor: "#e2e8f0", marginHorizontal: 8 },
-  metricLabelRow: { flexDirection: "row", alignItems: "center", gap: 3 },
-  metricLabel: { fontSize: 10, fontWeight: "700", color: "#64748b" },
-  metricValue: { fontSize: 14, fontWeight: "800", color: "#0f172a", marginTop: 2 },
-  metricSub: { fontSize: 9, color: "#94a3b8", marginTop: 1 },
-
-  matchReasonsBox: {
-    backgroundColor: "#f0fdf4",
-    borderWidth: 1,
-    borderColor: "#bbf7d0",
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 14,
+  sponsorText: {
+    fontSize: 12,
+    color: "#64748b",
+    fontWeight: "500",
+    marginBottom: 8,
   },
-  matchReasonHeader: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 6 },
-  matchReasonTitle: { fontSize: 11, fontWeight: "800", color: "#166534" },
-  reasonBulletRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 3 },
-  reasonBulletText: { fontSize: 11, color: "#15803d", fontWeight: "500", flex: 1 },
-  flagBulletText: { fontSize: 11, color: "#b45309", fontWeight: "500", flex: 1 },
 
-  cardActionsRow: { flexDirection: "row", gap: 10 },
-  detailsBtn: {
-    flex: 1,
-    backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: "#cbd5e1",
-    paddingVertical: 10,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  detailsBtnText: { fontSize: 12, fontWeight: "700", color: "#334155" },
-  applyBtn: {
-    flex: 1.2,
-    backgroundColor: "#0284c7",
+  metricsRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 10,
-    borderRadius: 10,
+    gap: 6,
+    marginBottom: 6,
+  },
+  metricsPay: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#059669",
+  },
+  metricsDot: {
+    fontSize: 12,
+    color: "#cbd5e1",
+  },
+  metricsDetail: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#475569",
+  },
+
+  matchLine: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: "#f1f5f9",
   },
-  applyBtnText: { fontSize: 12, fontWeight: "800", color: "#ffffff" },
+  matchLineText: {
+    fontSize: 11,
+    color: "#059669",
+    fontWeight: "600",
+    flex: 1,
+  },
 
   /* Modals */
   modalOverlay: {

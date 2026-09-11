@@ -109,47 +109,20 @@ export default function LoginModal() {
           style={{ flex: 1 }}
         >
           {/* Header Bar */}
+          {/* Header Bar */}
           <View style={styles.headerBar}>
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                <View
-                  style={{
-                    width: 30,
-                    height: 30,
-                    borderRadius: 9,
-                    backgroundColor: audience === "institution" ? "#0f172a" : "#f0f9ff",
-                    borderWidth: 1,
-                    borderColor: audience === "institution" ? "#334155" : "#bae6fd",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <StudyLoopLogo size={20} />
-                </View>
-                <View
-                  style={[
-                    styles.headerTag,
-                    { marginBottom: 0 },
-                    audience === "institution" && { backgroundColor: "#0f172a", borderColor: "#1e293b" },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.headerTagText,
-                      audience === "institution" && { color: "#38bdf8" },
-                    ]}
-                  >
-                    {audience === "consumer" ? "VOLUNTEER & PARTICIPANT PORTAL" : "INSTITUTIONAL SINGLE SIGN-ON"}
-                  </Text>
-                </View>
+            <View style={styles.headerTitleWrap}>
+              <View style={styles.headerLogoRow}>
+                <StudyLoopLogo size={24} />
+                <Text style={styles.headerLogoText}>StudyLoop</Text>
               </View>
               <Text style={styles.headerTitle}>
-                {audience === "consumer" ? "Volunteer Sign In" : "Research Institution & PI Portal"}
+                {audience === "consumer" ? "Participant Sign In" : "Research Portal Sign In"}
               </Text>
               <Text style={styles.headerSub}>
                 {audience === "consumer"
-                  ? "Access pre-screened trial matches, track study stipends, and manage clinic appointments."
-                  : "Direct investigator login to manage active clinical trial protocols and pre-screened candidate queues."}
+                  ? "Access clinical trials, study stipends, and visit milestones."
+                  : "Investigator login to manage trial protocols and screening queues."}
               </Text>
             </View>
             <TouchableOpacity
@@ -161,7 +134,7 @@ export default function LoginModal() {
             </TouchableOpacity>
           </View>
 
-          {/* Dual Audience Segmented Switcher */}
+          {/* Clean Segmented Switcher */}
           <View style={styles.audienceSegmentContainer}>
             <TouchableOpacity
               style={[
@@ -181,7 +154,7 @@ export default function LoginModal() {
                   audience === "consumer" && styles.audienceSegmentTextActive,
                 ]}
               >
-                Individual Consumer
+                Participant
               </Text>
             </TouchableOpacity>
 
@@ -193,7 +166,7 @@ export default function LoginModal() {
               onPress={() => setAudience("institution")}
             >
               <MaterialIcons
-                name="apartment"
+                name="domain"
                 size={16}
                 color={audience === "institution" ? "#ffffff" : "#64748b"}
               />
@@ -203,7 +176,7 @@ export default function LoginModal() {
                   audience === "institution" && styles.audienceSegmentTextActive,
                 ]}
               >
-                Research Institution
+                Institution & PI
               </Text>
             </TouchableOpacity>
           </View>
@@ -575,33 +548,20 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     gap: 12,
   },
-  headerTag: {
-    alignSelf: "flex-start",
-    backgroundColor: "#f0f9ff",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#bae6fd",
-    marginBottom: 6,
-  },
-  headerTagText: {
-    fontSize: 9,
-    fontWeight: "800",
-    color: "#0284c7",
-    letterSpacing: 0.5,
-  },
+  headerTitleWrap: { flex: 1 },
+  headerLogoRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 },
+  headerLogoText: { fontSize: 16, fontWeight: "900", color: "#0f172a", letterSpacing: -0.3 },
   headerTitle: {
-    fontSize: 19,
-    fontWeight: "900",
+    fontSize: 18,
+    fontWeight: "800",
     color: "#0f172a",
-    letterSpacing: -0.5,
+    letterSpacing: -0.4,
   },
   headerSub: {
-    fontSize: 11,
+    fontSize: 12,
     color: "#64748b",
     marginTop: 2,
-    lineHeight: 15,
+    lineHeight: 16,
   },
   closeBtn: {
     width: 32,

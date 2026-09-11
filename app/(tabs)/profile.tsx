@@ -130,7 +130,7 @@ export default function ProfileScreen() {
               <View style={styles.nameRow}>
                 <Text style={styles.profileName}>{currentProfile.fullName}</Text>
                 <View style={styles.verifiedBadge}>
-                  <MaterialIcons name="verified" size={14} color="#0284c7" />
+                  <MaterialIcons name="verified" size={13} color="#0284c7" />
                   <Text style={styles.verifiedText}>Active Match</Text>
                 </View>
               </View>
@@ -144,56 +144,41 @@ export default function ProfileScreen() {
               </View>
             </View>
           </View>
-          <View style={styles.taglineBox}>
-            <MaterialIcons name="info-outline" size={14} color="#0369a1" />
-            <Text style={styles.taglineText}>
-              {currentProfile.tagline || "Profile active for automated protocol qualification."}
-            </Text>
-          </View>
         </View>
 
-        {/* Demo Persona Quick Switcher */}
-        <View style={styles.sectionHeaderRow}>
-          <MaterialIcons name="swap-horiz" size={18} color="#0284c7" />
-          <Text style={styles.sectionHeader}>Quick-Switch Test Personas</Text>
-        </View>
-        <Text style={styles.sectionSub}>
-          Tap any persona to simulate different clinical recruitment demographics and observe live score changes on Discover:
-        </Text>
-
-        <View style={styles.personaGrid}>
-          {Object.values(DEMO_PERSONAS).map((p) => {
-            const isActive = activePersonaId === p.id;
-            return (
-              <TouchableOpacity
-                key={p.id}
-                style={[styles.personaCard, isActive && styles.personaCardActive]}
-                onPress={() => handleSelectPersona(p.id)}
-                activeOpacity={0.8}
-              >
-                <View style={styles.personaCardTop}>
-                  <View style={[styles.personaAvatar, isActive && styles.personaAvatarActive]}>
-                    <Text style={[styles.personaAvatarText, isActive && styles.personaAvatarTextActive]}>
+        {/* Compact Demo Persona Switcher */}
+        <View style={styles.personaSwitchSection}>
+          <Text style={styles.personaSectionTitle}>Active Test Persona</Text>
+          <View style={styles.personaSegmentedRow}>
+            {Object.values(DEMO_PERSONAS).map((p) => {
+              const isActive = activePersonaId === p.id;
+              return (
+                <TouchableOpacity
+                  key={p.id}
+                  style={[styles.personaPillBtn, isActive && styles.personaPillBtnActive]}
+                  onPress={() => handleSelectPersona(p.id)}
+                  activeOpacity={0.75}
+                >
+                  <View style={[styles.personaPillAvatar, isActive && styles.personaPillAvatarActive]}>
+                    <Text style={[styles.personaPillAvatarText, isActive && styles.personaPillAvatarTextActive]}>
                       {p.profile.avatarInitials}
                     </Text>
                   </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.personaPillName, isActive && styles.personaPillNameActive]}>
+                      {p.name}
+                    </Text>
+                    <Text style={[styles.personaPillBadge, isActive && styles.personaPillBadgeActive]} numberOfLines={1}>
+                      {p.badgeLabel}
+                    </Text>
+                  </View>
                   {isActive && (
-                    <View style={styles.activeCheckPill}>
-                      <MaterialIcons name="check" size={12} color="#ffffff" />
-                      <Text style={styles.activeCheckText}>Active</Text>
-                    </View>
+                    <MaterialIcons name="check-circle" size={18} color="#0284c7" />
                   )}
-                </View>
-                <Text style={styles.personaName}>{p.name}</Text>
-                <Text style={styles.personaDesc}>{p.roleDescription}</Text>
-                <View style={[styles.personaBadge, isActive && styles.personaBadgeActive]}>
-                  <Text style={[styles.personaBadgeText, isActive && styles.personaBadgeTextActive]}>
-                    {p.badgeLabel}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            );
-          })}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
 
         {/* Universal Health Form Sections */}
@@ -427,76 +412,66 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   tagText: { fontSize: 10, fontWeight: "700", color: "#475569" },
-  taglineBox: {
+  personaSwitchSection: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#f1f5f9",
+    marginBottom: 20,
+    shadowColor: "#0f172a",
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 1 },
+  },
+  personaSectionTitle: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#64748b",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 10,
+  },
+  personaSegmentedRow: { flexDirection: "column", gap: 8 },
+  personaPillBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    backgroundColor: "#f0f9ff",
+    gap: 10,
     padding: 10,
-    borderRadius: 10,
+    borderRadius: 12,
+    backgroundColor: "#f8fafc",
     borderWidth: 1,
-    borderColor: "#e0f2fe",
-    marginTop: 12,
+    borderColor: "#e2e8f0",
   },
-  taglineText: { fontSize: 11, color: "#0369a1", flex: 1, lineHeight: 15 },
+  personaPillBtnActive: {
+    backgroundColor: "#f0f9ff",
+    borderColor: "#bae6fd",
+  },
+  personaPillAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#e2e8f0",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  personaPillAvatarActive: {
+    backgroundColor: "#0284c7",
+  },
+  personaPillAvatarText: { fontSize: 11, fontWeight: "800", color: "#475569" },
+  personaPillAvatarTextActive: { color: "#ffffff" },
+  personaPillName: { fontSize: 13, fontWeight: "700", color: "#334155" },
+  personaPillNameActive: { color: "#0284c7", fontWeight: "800" },
+  personaPillBadge: { fontSize: 11, color: "#64748b", marginTop: 1 },
+  personaPillBadgeActive: { color: "#0369a1" },
 
   sectionHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginBottom: 4,
-  },
-  sectionHeader: { fontSize: 15, fontWeight: "800", color: "#0f172a" },
-  sectionSub: { fontSize: 12, color: "#64748b", marginBottom: 12, lineHeight: 16 },
-
-  personaGrid: { gap: 10, marginBottom: 24 },
-  personaCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1.5,
-    borderColor: "#e2e8f0",
-  },
-  personaCardActive: {
-    borderColor: "#0284c7",
-    backgroundColor: "#f8fcff",
-  },
-  personaCardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  personaAvatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: "#f1f5f9",
-    alignItems: "center",
-    justifyContent: "center",
     marginBottom: 8,
   },
-  personaAvatarActive: { backgroundColor: "#0284c7" },
-  personaAvatarText: { fontSize: 13, fontWeight: "800", color: "#475569" },
-  personaAvatarTextActive: { color: "#ffffff" },
-  activeCheckPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-    backgroundColor: "#0284c7",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
-  },
-  activeCheckText: { color: "#ffffff", fontSize: 10, fontWeight: "700" },
-  personaName: { fontSize: 15, fontWeight: "800", color: "#0f172a" },
-  personaDesc: { fontSize: 12, color: "#64748b", marginTop: 2 },
-  personaBadge: {
-    alignSelf: "flex-start",
-    backgroundColor: "#f1f5f9",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    marginTop: 8,
-  },
-  personaBadgeActive: { backgroundColor: "#e0f2fe" },
-  personaBadgeText: { fontSize: 10, fontWeight: "700", color: "#475569" },
-  personaBadgeTextActive: { color: "#0369a1" },
+  sectionHeader: { fontSize: 15, fontWeight: "800", color: "#0f172a" },
 
   formCard: {
     backgroundColor: "#ffffff",

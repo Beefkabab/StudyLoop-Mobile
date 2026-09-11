@@ -82,9 +82,9 @@ export default function ApplicationsScreen() {
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={
             <View style={styles.tabIntro}>
-              <Text style={styles.tabIntroTitle}>Application Funnel & Site Handoffs</Text>
+              <Text style={styles.tabIntroTitle}>Active Applications</Text>
               <Text style={styles.tabIntroSubtitle}>
-                Only applicants who pass dynamic pre-screeners reach clinical research coordinators.
+                Track screening qualification, coordinator updates, and clinic handoffs.
               </Text>
             </View>
           }
@@ -111,14 +111,16 @@ export default function ApplicationsScreen() {
 
                 {item.appointmentDate && (
                   <View style={styles.appointmentRow}>
-                    <MaterialIcons name="event" size={14} color="#0284c7" />
+                    <MaterialIcons name="event" size={13} color="#0284c7" />
                     <Text style={styles.appointmentText}>{item.appointmentDate}</Text>
                   </View>
                 )}
 
-                <View style={styles.notesBox}>
-                  <Text style={styles.notesLabel}>Coordinator Update:</Text>
-                  <Text style={styles.notesText}>{item.researcherNotes || "Application under active coordinator review."}</Text>
+                <View style={styles.notesRow}>
+                  <MaterialIcons name="chat-bubble-outline" size={12} color="#64748b" />
+                  <Text style={styles.notesText} numberOfLines={2}>
+                    {item.researcherNotes || "Application under active coordinator review."}
+                  </Text>
                 </View>
 
                 <View style={styles.appCardFooter}>
@@ -132,7 +134,7 @@ export default function ApplicationsScreen() {
                       )
                     }
                   >
-                    <MaterialIcons name="mail-outline" size={13} color="#0284c7" />
+                    <MaterialIcons name="mail-outline" size={12} color="#0284c7" />
                     <Text style={styles.contactBtnText}>Message Site</Text>
                   </TouchableOpacity>
                 </View>
@@ -151,9 +153,9 @@ export default function ApplicationsScreen() {
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={
             <View style={styles.tabIntro}>
-              <Text style={styles.tabIntroTitle}>Visit Reminders & Preparation</Text>
+              <Text style={styles.tabIntroTitle}>Visit Schedule & Tasks</Text>
               <Text style={styles.tabIntroSubtitle}>
-                Protocol adherence checklists automatically scheduled based on your trials.
+                Clinic visit milestones and protocol adherence preparation.
               </Text>
             </View>
           }
@@ -307,55 +309,54 @@ const styles = StyleSheet.create({
   /* App Card */
   appCard: {
     backgroundColor: "#ffffff",
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     borderWidth: 1,
     borderColor: "#e2e8f0",
+    marginBottom: 10,
     shadowColor: "#0f172a",
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    marginBottom: 14,
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
   },
-  appCardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
+  appCardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
   statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
     borderRadius: 6,
     borderWidth: 1,
   },
-  statusBadgeText: { fontSize: 10, fontWeight: "800" },
-  appPay: { fontSize: 16, fontWeight: "900", color: "#0f172a" },
-  appTitle: { fontSize: 15, fontWeight: "800", color: "#0f172a", lineHeight: 20 },
-  appSponsor: { fontSize: 12, color: "#64748b", marginTop: 2, marginBottom: 8 },
+  statusBadgeText: { fontSize: 10, fontWeight: "700" },
+  appPay: { fontSize: 15, fontWeight: "800", color: "#059669" },
+  appTitle: { fontSize: 15, fontWeight: "700", color: "#0f172a", lineHeight: 20 },
+  appSponsor: { fontSize: 12, color: "#64748b", marginTop: 2, marginBottom: 6 },
   appointmentRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    backgroundColor: "#f0f9ff",
-    padding: 8,
-    borderRadius: 8,
-    marginBottom: 10,
+    gap: 4,
+    marginBottom: 6,
   },
   appointmentText: { fontSize: 11, fontWeight: "700", color: "#0284c7" },
-  notesBox: {
-    backgroundColor: "#f8fafc",
-    padding: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#f1f5f9",
-    marginBottom: 10,
+  notesRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 5,
+    marginBottom: 8,
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: "#f1f5f9",
   },
-  notesLabel: { fontSize: 10, fontWeight: "700", color: "#64748b", marginBottom: 2 },
-  notesText: { fontSize: 11, color: "#334155", lineHeight: 15 },
+  notesText: { fontSize: 11, color: "#64748b", lineHeight: 15, flex: 1 },
   appCardFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   appTimestamp: { fontSize: 10, color: "#94a3b8" },
   contactBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 3,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+    paddingVertical: 3,
+    paddingHorizontal: 7,
     backgroundColor: "#f0f9ff",
     borderRadius: 6,
   },

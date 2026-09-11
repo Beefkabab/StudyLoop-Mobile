@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { Tabs, router, usePathname } from "expo-router";
-import { Platform, View, Text, TouchableOpacity } from "react-native";
+import { Platform, View, Text, TouchableOpacity, LogBox } from "react-native";
+LogBox.ignoreAllLogs();
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { StudyStoreProvider, useStudyStore } from "../../hooks/useStudyStore";
 import LoginModal from "../../components/LoginModal";
@@ -11,44 +12,25 @@ function HeaderAuthButton() {
 
   if (userRole === "pi" && activePI) {
     return (
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginRight: 12 }}>
-        <TouchableOpacity
-          onPress={() => openLoginModal("institution")}
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 4,
-            backgroundColor: "#0f172a",
-            paddingHorizontal: 9,
-            paddingVertical: 5,
-            borderRadius: 12,
-            borderWidth: 1,
-            borderColor: "#334155",
-          }}
-          activeOpacity={0.7}
-        >
-          <MaterialIcons name="medical-services" size={13} color="#38bdf8" />
-          <Text style={{ fontSize: 11, fontWeight: "800", color: "#ffffff" }}>
-            {activePI.name.replace("Dr. ", "")}
-          </Text>
-          <MaterialIcons name="arrow-drop-down" size={14} color="#ffffff" />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={exitPIToConsumer}
-          style={{
-            backgroundColor: "#f1f5f9",
-            paddingHorizontal: 8,
-            paddingVertical: 5,
-            borderRadius: 12,
-            borderWidth: 1,
-            borderColor: "#e2e8f0",
-          }}
-          activeOpacity={0.7}
-        >
-          <Text style={{ fontSize: 10, fontWeight: "700", color: "#64748b" }}>Exit PI</Text>
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity
+        onPress={exitPIToConsumer}
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 4,
+          backgroundColor: "#0f172a",
+          paddingHorizontal: 10,
+          paddingVertical: 6,
+          borderRadius: 14,
+          marginRight: 14,
+          borderWidth: 1,
+          borderColor: "#334155",
+        }}
+        activeOpacity={0.7}
+      >
+        <MaterialIcons name="logout" size={13} color="#38bdf8" />
+        <Text style={{ fontSize: 11, fontWeight: "800", color: "#ffffff" }}>Exit PI</Text>
+      </TouchableOpacity>
     );
   }
 
@@ -59,22 +41,35 @@ function HeaderAuthButton() {
       style={{
         flexDirection: "row",
         alignItems: "center",
-        gap: 4,
+        gap: 5,
         backgroundColor: "#f0f9ff",
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        borderRadius: 14,
+        paddingHorizontal: 9,
+        paddingVertical: 4,
+        borderRadius: 16,
         marginRight: 14,
         borderWidth: 1,
         borderColor: "#bae6fd",
       }}
       activeOpacity={0.7}
     >
-      <MaterialIcons name="person" size={13} color="#0284c7" />
-      <Text style={{ fontSize: 11, fontWeight: "800", color: "#0284c7" }}>
+      <View
+        style={{
+          width: 18,
+          height: 18,
+          borderRadius: 9,
+          backgroundColor: "#0284c7",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Text style={{ fontSize: 9, fontWeight: "800", color: "#ffffff" }}>
+          {currentProfile.avatarInitials}
+        </Text>
+      </View>
+      <Text style={{ fontSize: 11, fontWeight: "700", color: "#0284c7" }}>
         {currentProfile.fullName.split(" ")[0]}
       </Text>
-      <MaterialIcons name="arrow-drop-down" size={14} color="#0284c7" />
+      <MaterialIcons name="unfold-more" size={12} color="#0284c7" />
     </TouchableOpacity>
   );
 }
@@ -86,9 +81,9 @@ function TabsContent() {
 
   useEffect(() => {
     if (isPIMode && pathname !== "/researcher") {
-      router.replace("/(tabs)/researcher");
+      router.replace("/researcher");
     } else if (!isPIMode && pathname === "/researcher") {
-      router.replace("/(tabs)");
+      router.replace("/");
     }
   }, [isPIMode, pathname]);
 
@@ -138,7 +133,7 @@ function TabsContent() {
           name="index"
           options={{
             title: "Discover",
-            headerTitle: "StudyLoop Marketplace",
+            headerTitle: "Discover",
             href: isPIMode ? null : "/(tabs)",
             tabBarIcon: ({ color, size }) => (
               <MaterialIcons name="explore" size={size || 24} color={color} />
@@ -149,7 +144,7 @@ function TabsContent() {
           name="applications"
           options={{
             title: "My Studies",
-            headerTitle: "My Studies & Schedule",
+            headerTitle: "My Studies",
             href: isPIMode ? null : "/(tabs)/applications",
             tabBarIcon: ({ color, size }) => (
               <MaterialIcons name="assignment-turned-in" size={size || 24} color={color} />
@@ -160,7 +155,7 @@ function TabsContent() {
           name="profile"
           options={{
             title: "Profile",
-            headerTitle: "Universal Health Profile",
+            headerTitle: "Health Profile",
             href: isPIMode ? null : "/(tabs)/profile",
             tabBarIcon: ({ color, size }) => (
               <MaterialIcons name="person" size={size || 24} color={color} />
@@ -171,10 +166,7 @@ function TabsContent() {
           name="researcher"
           options={{
             title: "PI Portal",
-            headerTitle:
-              activePI
-                ? `${activePI.name} Portal`
-                : "Coordinator Workspace",
+            headerTitle: "PI Workspace",
             href: !isPIMode ? null : "/(tabs)/researcher",
             tabBarIcon: ({ color, size }) => (
               <MaterialIcons
