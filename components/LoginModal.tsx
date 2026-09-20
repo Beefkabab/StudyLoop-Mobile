@@ -16,7 +16,7 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useRouter } from "expo-router";
 import { useStudyStore } from "../hooks/useStudyStore";
 import { PI_ACCOUNTS } from "../constants/sampleData";
-import { PIData } from "../constants/types";
+import { PIData, Persona } from "../constants/types";
 import { StudyLoopLogo } from "./StudyLoopLogo";
 
 export default function LoginModal() {
@@ -46,7 +46,7 @@ export default function LoginModal() {
     }
   }, [loginModalAudience, loginModalVisible]);
 
-  const handleConsumerQuickLogin = (personaKey: "rural_male" | "urban_student" | "chronic_patient", name: string) => {
+  const handleConsumerQuickLogin = (personaKey: Persona["id"], name: string) => {
     loginAsConsumer(personaKey);
     Alert.alert("Welcome Back!", `Signed in as ${name}. Redirecting to Participant Discover Marketplace.`);
     router.push("/(tabs)");
@@ -266,6 +266,106 @@ export default function LoginModal() {
                       </View>
                       <Text style={styles.personaDesc}>Type 2 Diabetes Patient • Cary, NC</Text>
                       <Text style={styles.personaSub}>Matches GLP-1 Diabetes Trial (95%)</Text>
+                    </View>
+                    <MaterialIcons name="chevron-right" size={20} color="#94a3b8" />
+                  </TouchableOpacity>
+
+                  {/* Persona 4: Evelyn */}
+                  <TouchableOpacity
+                    style={[
+                      styles.personaCard,
+                      userRole === "consumer" && activePersonaId === "senior_control" && styles.personaCardActive,
+                    ]}
+                    onPress={() => handleConsumerQuickLogin("senior_control", "Dr. Evelyn Harper")}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.personaAvatar, { backgroundColor: "#fef3c7" }]}>
+                      <Text style={[styles.personaAvatarText, { color: "#b45309" }]}>EH</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                        <Text style={styles.personaName}>Dr. Evelyn Harper</Text>
+                        <View style={[styles.badgePill, { backgroundColor: "#fffbeb", borderColor: "#fde68a" }]}>
+                          <Text style={[styles.badgePillText, { color: "#b45309" }]}>Senior Control</Text>
+                        </View>
+                      </View>
+                      <Text style={styles.personaDesc}>Healthy Senior Control • Chapel Hill, NC</Text>
+                      <Text style={styles.personaSub}>Matches Healthy Aging Sensory Study</Text>
+                    </View>
+                    <MaterialIcons name="chevron-right" size={20} color="#94a3b8" />
+                  </TouchableOpacity>
+
+                  {/* Persona 5: Darius */}
+                  <TouchableOpacity
+                    style={[
+                      styles.personaCard,
+                      userRole === "consumer" && activePersonaId === "respiratory_patient" && styles.personaCardActive,
+                    ]}
+                    onPress={() => handleConsumerQuickLogin("respiratory_patient", "Darius Washington")}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.personaAvatar, { backgroundColor: "#e0e7ff" }]}>
+                      <Text style={[styles.personaAvatarText, { color: "#4338ca" }]}>DW</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                        <Text style={styles.personaName}>Darius Washington</Text>
+                        <View style={[styles.badgePill, { backgroundColor: "#eef2ff", borderColor: "#c7d2fe" }]}>
+                          <Text style={[styles.badgePillText, { color: "#4338ca" }]}>Asthma Cohort</Text>
+                        </View>
+                      </View>
+                      <Text style={styles.personaDesc}>Respiratory Patient • Raleigh, NC</Text>
+                      <Text style={styles.personaSub}>Matches Digital Sleep & Biomarkers</Text>
+                    </View>
+                    <MaterialIcons name="chevron-right" size={20} color="#94a3b8" />
+                  </TouchableOpacity>
+
+                  {/* Persona 6: Maria */}
+                  <TouchableOpacity
+                    style={[
+                      styles.personaCard,
+                      userRole === "consumer" && activePersonaId === "bilingual_caregiver" && styles.personaCardActive,
+                    ]}
+                    onPress={() => handleConsumerQuickLogin("bilingual_caregiver", "Maria Santos")}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.personaAvatar, { backgroundColor: "#fce7f3" }]}>
+                      <Text style={[styles.personaAvatarText, { color: "#be185d" }]}>MS</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                        <Text style={styles.personaName}>Maria Santos</Text>
+                        <View style={[styles.badgePill, { backgroundColor: "#fdf2f8", borderColor: "#fbcfe8" }]}>
+                          <Text style={[styles.badgePillText, { color: "#be185d" }]}>Caregiver Diversity</Text>
+                        </View>
+                      </View>
+                      <Text style={styles.personaDesc}>Bilingual Caregiver • Burlington, NC</Text>
+                      <Text style={styles.personaSub}>Matches GLP-1 & Hypertension Protocols</Text>
+                    </View>
+                    <MaterialIcons name="chevron-right" size={20} color="#94a3b8" />
+                  </TouchableOpacity>
+
+                  {/* Persona 7: Jim */}
+                  <TouchableOpacity
+                    style={[
+                      styles.personaCard,
+                      userRole === "consumer" && activePersonaId === "veteran_volunteer" && styles.personaCardActive,
+                    ]}
+                    onPress={() => handleConsumerQuickLogin("veteran_volunteer", "James 'Jim' O'Connor")}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.personaAvatar, { backgroundColor: "#fef2f2" }]}>
+                      <Text style={[styles.personaAvatarText, { color: "#b91c1c" }]}>JO</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                        <Text style={styles.personaName}>James &apos;Jim&apos; O&apos;Connor</Text>
+                        <View style={[styles.badgePill, { backgroundColor: "#fff1f2", borderColor: "#fecdd3" }]}>
+                          <Text style={[styles.badgePillText, { color: "#b91c1c" }]}>Veteran Cohort</Text>
+                        </View>
+                      </View>
+                      <Text style={styles.personaDesc}>Military Veteran • Fayetteville, NC</Text>
+                      <Text style={styles.personaSub}>Matches Sleep Medicine & Circadian</Text>
                     </View>
                     <MaterialIcons name="chevron-right" size={20} color="#94a3b8" />
                   </TouchableOpacity>
