@@ -14,27 +14,21 @@ import {
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useRouter, useGlobalSearchParams } from "expo-router";
 import { useStudyStore, StudyWithMatch } from "../../hooks/useStudyStore";
-import { DEMO_PERSONAS } from "../../constants/sampleData";
 
-type CategoryFilter = "all" | "high_match" | "healthy" | "remote" | "clinical_trial" | "blood_draw" | "imaging_cognitive";
+type FilterId = "all" | "remote" | "healthy" | "paid_high" | "clinical_trial";
 
-const CATEGORIES: { id: CategoryFilter; label: string; icon: keyof typeof MaterialIcons.glyphMap }[] = [
-  { id: "all", label: "All Studies", icon: "dashboard" },
-  { id: "high_match", label: "90%+ Match", icon: "auto-awesome" },
-  { id: "healthy", label: "Healthy Volunteer", icon: "favorite" },
-  { id: "remote", label: "100% Remote", icon: "home" },
-  { id: "clinical_trial", label: "Clinical Trials", icon: "medication" },
-  { id: "blood_draw", label: "Blood Draws", icon: "water-drop" },
-  { id: "imaging_cognitive", label: "Cognitive & fMRI", icon: "psychology" },
+const FILTERS: { id: FilterId; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "remote", label: "Remote Only" },
+  { id: "healthy", label: "Healthy Volunteers" },
+  { id: "paid_high", label: "Paid $500+" },
+  { id: "clinical_trial", label: "Clinical Trials" },
 ];
 
 export default function DiscoverScreen() {
   const router = useRouter();
   const { study, login } = useGlobalSearchParams<{ study?: string; login?: string }>();
   const {
-    activePersonaId,
-    currentProfile,
-    switchPersona,
     studies,
     toggleSaveStudy,
     submitApplication,
@@ -42,11 +36,13 @@ export default function DiscoverScreen() {
   } = useStudyStore();
 
   const [search, setSearch] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<CategoryFilter>("all");
-  const [personaSheetOpen, setPersonaSheetOpen] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState<FilterId>("all");
 
   // Modals
   const [selectedDetailStudy, setSelectedDetailStudy] = useState<StudyWithMatch | null>(null);
+  const [screenerStudy, setScreenerStudy] = useState<StudyWithMatch | null>(null);
+  const [screenerAnswers, setScreenerAnswers] = useState<Record<string, string>>({});
+  const [screenerResult, setScreenerResult] = useState<{ passed: boolean; disqualifications: string[] } | null>(null);
 
   React.useEffect(() => {
     if (study) {
@@ -58,43 +54,33 @@ export default function DiscoverScreen() {
       openLoginModal(login === "pi" ? "institution" : "consumer");
     }
   }, [study, login, studies]);
-  const [screenerStudy, setScreenerStudy] = useState<StudyWithMatch | null>(null);
-  const [screenerAnswers, setScreenerAnswers] = useState<Record<string, string>>({});
-  const [screenerResult, setScreenerResult] = useState<{ passed: boolean; disqualifications: string[] } | null>(null);
 
   // Filter studies
-  const filteredStudies = studies.filter((study) => {
+  const filteredStudies = studies.filter((s) => {
     // Search query
     if (search.trim()) {
       const q = search.toLowerCase();
       const matchesSearch =
-        study.title.toLowerCase().includes(q) ||
-        study.summary.toLowerCase().includes(q) ||
-        study.city.toLowerCase().includes(q) ||
-        study.sponsorName.toLowerCase().includes(q);
+        s.title.toLowerCase().includes(q) ||
+        s.summary.toLowerCase().includes(q) ||
+        s.city.toLowerCase().includes(q) ||
+        s.state.toLowerCase().includes(q) ||
+        s.sponsorName.toLowerCase().includes(q);
       if (!matchesSearch) return false;
     }
 
-    // Category filter
-    if (selectedCategory === "high_match" && study.match.score < 90) return false;
-    if (selectedCategory === "healthy" && !study.healthyVolunteersAccepted) return false;
-    if (selectedCategory === "remote" && study.locationType !== "remote") return false;
-    if (selectedCategory === "clinical_trial" && study.studyType !== "clinical_trial") return false;
-    if (selectedCategory === "blood_draw" && study.studyType !== "blood_draw") return false;
-    if (
-      selectedCategory === "imaging_cognitive" &&
-      study.studyType !== "imaging_mri" &&
-      study.studyType !== "cognitive_assessment"
-    ) {
-      return false;
-    }
+    // Filter selection
+    if (selectedFilter === "remote" && s.locationType !== "remote") return false;
+    if (selectedFilter === "healthy" && !s.healthyVolunteersAccepted) return false;
+    if (selectedFilter === "paid_high" && s.compensationAmount < 500) return false;
+    if (selectedFilter === "clinical_trial" && s.studyType !== "clinical_trial") return false;
 
     return true;
   });
 
-  const handleOpenScreener = (study: StudyWithMatch) => {
+  const handleOpenScreener = (s: StudyWithMatch) => {
     setSelectedDetailStudy(null);
-    setScreenerStudy(study);
+    setScreenerStudy(s);
     setScreenerAnswers({});
     setScreenerResult(null);
   };
@@ -108,7 +94,7 @@ export default function DiscoverScreen() {
 
     const unanswered = screenerStudy.questions.some((q) => !screenerAnswers[q.id]);
     if (unanswered) {
-      Alert.alert("Incomplete", "Please answer all protocol questions before proceeding.");
+      Alert.alert("Incomplete", "Please answer all questions before submitting.");
       return;
     }
 
@@ -131,48 +117,47 @@ export default function DiscoverScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Modern Search Input */}
+      {/* Prominent Search Bar (Uber-inspired clarity) */}
       <View style={styles.searchContainer}>
         <View style={styles.searchBox}>
-          <MaterialIcons name="search" size={17} color="#94a3b8" />
+          <MaterialIcons name="search" size={20} color="#64748b" />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search trials, condition, location..."
+            placeholder="Search condition, location, or sponsor..."
             placeholderTextColor="#94a3b8"
             value={search}
             onChangeText={setSearch}
+            returnKeyType="search"
           />
           {search.length > 0 && (
-            <TouchableOpacity onPress={() => setSearch("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <MaterialIcons name="close" size={16} color="#94a3b8" />
+            <TouchableOpacity
+              onPress={() => setSearch("")}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <MaterialIcons name="cancel" size={18} color="#94a3b8" />
             </TouchableOpacity>
           )}
         </View>
       </View>
 
-      {/* Horizontal Category Ribbon */}
-      <View style={styles.categoryScrollWrapper}>
+      {/* Useful Filters (Restrained, approachable pills) */}
+      <View style={styles.filterScrollWrapper}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoryScroll}
+          contentContainerStyle={styles.filterScroll}
         >
-          {CATEGORIES.map((cat) => {
-            const isSelected = selectedCategory === cat.id;
+          {FILTERS.map((f) => {
+            const isSelected = selectedFilter === f.id;
             return (
               <TouchableOpacity
-                key={cat.id}
-                style={[styles.categoryChip, isSelected && styles.categoryChipActive]}
-                onPress={() => setSelectedCategory(cat.id)}
+                key={f.id}
+                style={[styles.filterChip, isSelected && styles.filterChipActive]}
+                onPress={() => setSelectedFilter(f.id)}
                 activeOpacity={0.75}
               >
-                <MaterialIcons
-                  name={cat.icon}
-                  size={13}
-                  color={isSelected ? "#ffffff" : "#64748b"}
-                />
-                <Text style={[styles.categoryChipText, isSelected && styles.categoryChipTextActive]}>
-                  {cat.label}
+                <Text style={[styles.filterChipText, isSelected && styles.filterChipTextActive]}>
+                  {f.label}
                 </Text>
               </TouchableOpacity>
             );
@@ -180,7 +165,7 @@ export default function DiscoverScreen() {
         </ScrollView>
       </View>
 
-      {/* Main Studies List */}
+      {/* Studies Feed */}
       <FlatList
         data={filteredStudies}
         keyExtractor={(item) => item.id}
@@ -188,192 +173,145 @@ export default function DiscoverScreen() {
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <View style={styles.listHeader}>
-            <Text style={styles.listHeaderTitle}>
-              {filteredStudies.length} matching studies near {currentProfile.city}, {currentProfile.state}
+            <Text style={styles.listHeaderText}>
+              {filteredStudies.length} {filteredStudies.length === 1 ? "study" : "studies"} available
             </Text>
           </View>
         }
-        renderItem={({ item }) => {
-          const isEmerald = item.match.score >= 90;
-          const isSky = item.match.score >= 70 && item.match.score < 90;
-
-          return (
-            <TouchableOpacity
-              style={styles.studyCard}
-              onPress={() => setSelectedDetailStudy(item)}
-              activeOpacity={0.88}
-            >
-              {/* Header row: Study Type + Match Score Pill + Bookmark */}
-              <View style={styles.cardHeader}>
-                <View style={styles.cardBadgeRow}>
-                  <Text style={styles.studyTypeTagText}>
-                    {item.studyType.replace(/_/g, " ").toUpperCase()}
-                  </Text>
-                  {item.locationType === "remote" && (
-                    <Text style={styles.remoteTagText}>• REMOTE</Text>
-                  )}
-                </View>
-
-                <View style={styles.cardHeaderActions}>
-                  <View
-                    style={[
-                      styles.matchBadge,
-                      isEmerald
-                        ? styles.matchBadgeEmerald
-                        : isSky
-                        ? styles.matchBadgeSky
-                        : styles.matchBadgeSlate,
-                    ]}
-                  >
-                    <MaterialIcons
-                      name="auto-awesome"
-                      size={10}
-                      color={isEmerald ? "#059669" : isSky ? "#0284c7" : "#64748b"}
-                    />
-                    <Text
-                      style={[
-                        styles.matchBadgeScore,
-                        isEmerald
-                          ? styles.matchBadgeScoreEmerald
-                          : isSky
-                          ? styles.matchBadgeScoreSky
-                          : styles.matchBadgeScoreSlate,
-                      ]}
-                    >
-                      {item.match.score}% Match
-                    </Text>
-                  </View>
-
-                  <TouchableOpacity
-                    style={styles.bookmarkBtn}
-                    onPress={() => toggleSaveStudy(item.id)}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <MaterialIcons
-                      name={item.isSaved ? "bookmark" : "bookmark-border"}
-                      size={18}
-                      color={item.isSaved ? "#0284c7" : "#94a3b8"}
-                    />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {/* Title */}
-              <Text style={styles.studyTitle} numberOfLines={2}>{item.title}</Text>
-
-              {/* Facility & Location */}
-              <Text style={styles.sponsorText} numberOfLines={1}>
-                {item.sponsorName} • {item.city}, {item.state}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <MaterialIcons name="search-off" size={44} color="#cbd5e1" />
+            <Text style={styles.emptyTitle}>No matching studies found</Text>
+            <Text style={styles.emptySubtitle}>
+              Try clearing your search term or switching filter options to see more opportunities.
+            </Text>
+            {(search.length > 0 || selectedFilter !== "all") && (
+              <TouchableOpacity
+                style={styles.resetButton}
+                onPress={() => {
+                  setSearch("");
+                  setSelectedFilter("all");
+                }}
+              >
+                <Text style={styles.resetButtonText}>Reset filters</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        }
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={styles.card}
+            onPress={() => setSelectedDetailStudy(item)}
+            activeOpacity={0.88}
+          >
+            {/* Top Row: Category tag and Bookmark button */}
+            <View style={styles.cardHeaderRow}>
+              <Text style={styles.cardCategory} numberOfLines={1}>
+                {item.studyType.replace(/_/g, " ").toUpperCase()} • {item.sponsorName.toUpperCase()}
               </Text>
-
-              {/* Clean Typographic Metrics Line (No nested box!) */}
-              <View style={styles.metricsRow}>
-                <Text style={styles.metricsPay}>${item.compensationAmount}</Text>
-                <Text style={styles.metricsDot}>•</Text>
-                <Text style={styles.metricsDetail}>{item.timeCommitment.split(" (")[0]}</Text>
-                <Text style={styles.metricsDot}>•</Text>
-                <Text style={styles.metricsDetail}>{item.locationType === "remote" ? "From Home" : "On-Site"}</Text>
-              </View>
-
-              {/* Clean Single-line Match Check (No nested green box!) */}
-              {item.match.matchReasons.length > 0 && (
-                <View style={styles.matchLine}>
-                  <MaterialIcons name="check" size={13} color="#059669" />
-                  <Text style={styles.matchLineText} numberOfLines={1}>
-                    {item.match.matchReasons[0]}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          );
-        }}
-      />
-
-      {/* Quick Persona Switcher Bottom Sheet */}
-      <Modal visible={personaSheetOpen} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.sheetContent}>
-            <View style={styles.sheetHeader}>
-              <View>
-                <Text style={styles.sheetTitle}>Switch Test Persona</Text>
-                <Text style={styles.sheetSubtitle}>
-                  Instantly recalculates study compatibility scores across the feed
-                </Text>
-              </View>
-              <TouchableOpacity onPress={() => setPersonaSheetOpen(false)}>
-                <MaterialIcons name="close" size={22} color="#64748b" />
+              <TouchableOpacity
+                style={styles.bookmarkButton}
+                onPress={(e: any) => {
+                  e?.stopPropagation?.();
+                  toggleSaveStudy(item.id);
+                }}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                accessibilityLabel={item.isSaved ? "Saved study" : "Save study"}
+              >
+                <MaterialIcons
+                  name={item.isSaved ? "bookmark" : "bookmark-border"}
+                  size={24}
+                  color={item.isSaved ? "#0284c7" : "#94a3b8"}
+                />
               </TouchableOpacity>
             </View>
 
-            <View style={styles.sheetPersonasList}>
-              {Object.values(DEMO_PERSONAS).map((p) => {
-                const isActive = activePersonaId === p.id;
-                return (
-                  <TouchableOpacity
-                    key={p.id}
-                    style={[styles.sheetPersonaCard, isActive && styles.sheetPersonaCardActive]}
-                    onPress={() => {
-                      switchPersona(p.id);
-                      setPersonaSheetOpen(false);
-                    }}
-                  >
-                    <View style={[styles.sheetAvatar, isActive && styles.sheetAvatarActive]}>
-                      <Text style={[styles.sheetAvatarText, isActive && styles.sheetAvatarTextActive]}>
-                        {p.profile.avatarInitials}
-                      </Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.sheetPersonaName}>{p.name}</Text>
-                      <Text style={styles.sheetPersonaDesc}>{p.roleDescription}</Text>
-                      <Text style={styles.sheetPersonaBadge}>{p.badgeLabel}</Text>
-                    </View>
-                    {isActive ? (
-                      <MaterialIcons name="check-circle" size={20} color="#0284c7" />
-                    ) : (
-                      <MaterialIcons name="radio-button-unchecked" size={20} color="#cbd5e1" />
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
+            {/* 1. What is the study? (Naturally wrapped title + summary) */}
+            <Text style={styles.cardTitle}>
+              {item.title}
+            </Text>
+            <Text style={styles.cardSummary} numberOfLines={2}>
+              {item.summary}
+            </Text>
+
+            {/* 2. Is it remote or nearby? */}
+            <View style={styles.metaRow}>
+              <MaterialIcons
+                name={item.locationType === "remote" ? "home" : "location-on"}
+                size={16}
+                color="#475569"
+                style={styles.metaIcon}
+              />
+              <Text style={styles.locationText} numberOfLines={1}>
+                {item.locationType === "remote"
+                  ? "100% Remote • Nationwide"
+                  : `${item.city}, ${item.state} • On-Site`}
+              </Text>
             </View>
 
-            <TouchableOpacity
-              style={styles.sheetCloseBtn}
-              onPress={() => {
-                setPersonaSheetOpen(false);
-                router.push("/profile");
-              }}
-            >
-              <Text style={styles.sheetCloseBtnText}>Edit Universal Health Profile</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+            {/* 3. What is the compensation and time commitment? */}
+            <View style={styles.metaRow}>
+              <MaterialIcons
+                name="payments"
+                size={16}
+                color="#0284c7"
+                style={styles.metaIcon}
+              />
+              <Text style={styles.compensationText}>
+                ${item.compensationAmount}
+                <Text style={styles.commitmentText}> • {item.timeCommitment}</Text>
+              </Text>
+            </View>
 
-      {/* Protocol Details Modal */}
+            {/* 4. How do I learn more? */}
+            <View style={styles.cardFooter}>
+              <Text style={styles.learnMoreText}>View details & criteria</Text>
+              <MaterialIcons name="arrow-forward" size={14} color="#0284c7" />
+            </View>
+          </TouchableOpacity>
+        )}
+      />
+
+      {/* Protocol Details Modal (Approachable Consumer Sheet) */}
       <Modal visible={!!selectedDetailStudy} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.detailModalContent}>
             {selectedDetailStudy && (
               <>
                 <View style={styles.modalHeaderRow}>
-                  <View style={{ flex: 1, paddingRight: 10 }}>
-                    <Text style={styles.detailModalBadge}>
+                  <View style={{ flex: 1, paddingRight: 12 }}>
+                    <Text style={styles.modalCategoryTag}>
                       {selectedDetailStudy.studyType.replace(/_/g, " ").toUpperCase()} • {selectedDetailStudy.irbApprovalNumber}
                     </Text>
-                    <Text style={styles.detailModalTitle}>{selectedDetailStudy.title}</Text>
+                    <Text style={styles.modalTitle}>{selectedDetailStudy.title}</Text>
                   </View>
-                  <TouchableOpacity onPress={() => setSelectedDetailStudy(null)}>
-                    <MaterialIcons name="close" size={24} color="#64748b" />
+                  <TouchableOpacity
+                    onPress={() => setSelectedDetailStudy(null)}
+                    style={styles.modalCloseButton}
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                  >
+                    <MaterialIcons name="close" size={22} color="#0f172a" />
                   </TouchableOpacity>
                 </View>
 
                 <ScrollView style={styles.detailScroll} showsVerticalScrollIndicator={false}>
-                  <View style={styles.piBox}>
-                    <MaterialIcons name="science" size={20} color="#0284c7" />
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.piName}>{selectedDetailStudy.piName}</Text>
-                      <Text style={styles.piTitle}>{selectedDetailStudy.piTitle || selectedDetailStudy.sponsorName}</Text>
+                  {/* Quick Metric Tiles */}
+                  <View style={styles.metricTilesRow}>
+                    <View style={styles.metricTile}>
+                      <Text style={styles.metricTileLabel}>Stipend</Text>
+                      <Text style={styles.metricTileValue}>${selectedDetailStudy.compensationAmount}</Text>
+                    </View>
+                    <View style={styles.metricTile}>
+                      <Text style={styles.metricTileLabel}>Location</Text>
+                      <Text style={styles.metricTileValue}>
+                        {selectedDetailStudy.locationType === "remote" ? "Remote" : selectedDetailStudy.city}
+                      </Text>
+                    </View>
+                    <View style={styles.metricTile}>
+                      <Text style={styles.metricTileLabel}>Volunteers</Text>
+                      <Text style={styles.metricTileValue}>
+                        {selectedDetailStudy.healthyVolunteersAccepted ? "Healthy" : "Condition"}
+                      </Text>
                     </View>
                   </View>
 
@@ -381,31 +319,40 @@ export default function DiscoverScreen() {
                   <Text style={styles.detailBodyText}>{selectedDetailStudy.fullDescription}</Text>
 
                   <Text style={styles.detailSectionTitle}>Compensation Schedule</Text>
-                  <View style={styles.scheduleBox}>
-                    <Text style={styles.scheduleAmount}>${selectedDetailStudy.compensationAmount}</Text>
-                    <Text style={styles.scheduleText}>{selectedDetailStudy.compensationSchedule || "Full payment upon protocol completion."}</Text>
-                  </View>
-
-                  <Text style={styles.detailSectionTitle}>Facility & Site</Text>
-                  <View style={styles.facilityBox}>
-                    <MaterialIcons name="location-on" size={18} color="#0284c7" />
-                    <Text style={styles.facilityText}>{selectedDetailStudy.facilityAddress || `${selectedDetailStudy.city}, ${selectedDetailStudy.state}`}</Text>
-                  </View>
-
-                  <Text style={styles.detailSectionTitle}>Target Demographics</Text>
                   <Text style={styles.detailBodyText}>
-                    {selectedDetailStudy.targetDemographicFocus || "Open recruitment across eligible age and health categories."}
+                    {selectedDetailStudy.compensationSchedule || `Full stipend of $${selectedDetailStudy.compensationAmount} disbursed across scheduled visits.`}
+                  </Text>
+
+                  <Text style={styles.detailSectionTitle}>Location & Facility</Text>
+                  <Text style={styles.detailBodyText}>
+                    {selectedDetailStudy.facilityAddress || `${selectedDetailStudy.city}, ${selectedDetailStudy.state}`}
+                  </Text>
+
+                  <Text style={styles.detailSectionTitle}>Eligibility Requirements</Text>
+                  <View style={styles.eligibilityCard}>
+                    <Text style={styles.eligibilityRow}>• Age requirement: {selectedDetailStudy.minAge} to {selectedDetailStudy.maxAge} years</Text>
+                    <Text style={styles.eligibilityRow}>
+                      • Healthy volunteers: {selectedDetailStudy.healthyVolunteersAccepted ? "Accepted" : "Specific diagnosis required"}
+                    </Text>
+                    {selectedDetailStudy.targetDemographicFocus && (
+                      <Text style={styles.eligibilityRow}>• Focus cohort: {selectedDetailStudy.targetDemographicFocus}</Text>
+                    )}
+                  </View>
+                  <Text style={styles.disclaimerText}>
+                    Note: StudyLoop supports initial participant discovery. Final eligibility and medical determinations are made exclusively by the research team during informed consent.
                   </Text>
                 </ScrollView>
 
-                <TouchableOpacity
-                  style={styles.startScreenerBtn}
-                  onPress={() => handleOpenScreener(selectedDetailStudy)}
-                  activeOpacity={0.85}
-                >
-                  <MaterialIcons name="assignment" size={18} color="#ffffff" />
-                  <Text style={styles.startScreenerText}>Start 2-Min Pre-Screener</Text>
-                </TouchableOpacity>
+                <View style={styles.modalFooter}>
+                  <TouchableOpacity
+                    style={styles.primaryActionButton}
+                    onPress={() => handleOpenScreener(selectedDetailStudy)}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={styles.primaryActionText}>Check Eligibility (2-min screener)</Text>
+                    <MaterialIcons name="arrow-forward" size={16} color="#ffffff" />
+                  </TouchableOpacity>
+                </View>
               </>
             )}
           </View>
@@ -419,41 +366,43 @@ export default function DiscoverScreen() {
             {screenerStudy && (
               <>
                 <View style={styles.modalHeaderRow}>
-                  <View style={{ flex: 1, paddingRight: 10 }}>
-                    <Text style={styles.screenerSubtitle}>PROTOCOL PRE-SCREENER</Text>
-                    <Text style={styles.screenerTitle}>{screenerStudy.title}</Text>
+                  <View style={{ flex: 1, paddingRight: 12 }}>
+                    <Text style={styles.modalCategoryTag}>PRE-SCREENER</Text>
+                    <Text style={styles.modalTitle} numberOfLines={2}>{screenerStudy.title}</Text>
                   </View>
-                  <TouchableOpacity onPress={() => setScreenerStudy(null)}>
-                    <MaterialIcons name="close" size={24} color="#64748b" />
+                  <TouchableOpacity
+                    onPress={() => setScreenerStudy(null)}
+                    style={styles.modalCloseButton}
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                  >
+                    <MaterialIcons name="close" size={22} color="#0f172a" />
                   </TouchableOpacity>
                 </View>
 
                 {screenerResult ? (
-                  /* Screener Verdict Screen */
+                  /* Verdict View */
                   <View style={styles.verdictContainer}>
                     {screenerResult.passed ? (
                       <View style={styles.verdictBoxSuccess}>
-                        <View style={styles.verdictIconCircleSuccess}>
-                          <MaterialIcons name="verified" size={40} color="#16a34a" />
+                        <View style={styles.verdictIconSuccess}>
+                          <MaterialIcons name="check" size={32} color="#059669" />
                         </View>
-                        <Text style={styles.verdictTitleSuccess}>Pre-Screener Qualified!</Text>
+                        <Text style={styles.verdictTitleSuccess}>Preliminary Criteria Aligned</Text>
                         <Text style={styles.verdictTextSuccess}>
-                          Your answers match the IRB protocol requirements. Your Universal Profile has been securely forwarded to the study coordinator.
+                          Your answers match the initial criteria for this protocol. Your application has been submitted to the study team.
                         </Text>
-                        <View style={styles.verdictDetails}>
-                          <Text style={styles.verdictDetailItem}>• Study Coordinator Sarah notified</Text>
-                          <Text style={styles.verdictDetailItem}>• Visit checklist added to your My Studies tab</Text>
-                          <Text style={styles.verdictDetailItem}>• Expect call/email within 48 business hours</Text>
-                        </View>
+                        <Text style={styles.verdictSubtext}>
+                          A study coordinator will review your responses and reach out to discuss next steps and informed consent.
+                        </Text>
                       </View>
                     ) : (
                       <View style={styles.verdictBoxFailure}>
-                        <View style={styles.verdictIconCircleFailure}>
-                          <MaterialIcons name="error-outline" size={40} color="#dc2626" />
+                        <View style={styles.verdictIconFailure}>
+                          <MaterialIcons name="info-outline" size={32} color="#dc2626" />
                         </View>
                         <Text style={styles.verdictTitleFailure}>Protocol Not a Match</Text>
                         <Text style={styles.verdictTextFailure}>
-                          Based on protocol-specific exclusion rules, this specific trial is not a fit right now:
+                          Based on the early protocol criteria, this study is not an aligned fit right now.
                         </Text>
                         {screenerResult.disqualifications.map((reason, idx) => (
                           <Text key={idx} style={styles.disqualificationBullet}>• {reason}</Text>
@@ -462,16 +411,16 @@ export default function DiscoverScreen() {
                     )}
 
                     <TouchableOpacity
-                      style={styles.verdictDoneBtn}
+                      style={styles.primaryActionButton}
                       onPress={() => {
                         setScreenerStudy(null);
                         if (screenerResult.passed) {
-                          router.push("/applications");
+                          router.push("/(tabs)/applications");
                         }
                       }}
                     >
-                      <Text style={styles.verdictDoneBtnText}>
-                        {screenerResult.passed ? "View in My Studies" : "Explore Other Trials"}
+                      <Text style={styles.primaryActionText}>
+                        {screenerResult.passed ? "View in My Studies" : "Explore Other Studies"}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -479,14 +428,16 @@ export default function DiscoverScreen() {
                   /* Questions Form */
                   <ScrollView style={styles.screenerScroll} showsVerticalScrollIndicator={false}>
                     <Text style={styles.screenerIntro}>
-                      Answer these {screenerStudy.questions.length} brief exclusion questions. Only qualified applicants are routed to the clinical team.
+                      Answer these {screenerStudy.questions.length} brief questions to check whether this protocol fits your background.
                     </Text>
 
                     {screenerStudy.questions.map((q, idx) => {
                       const currentAns = screenerAnswers[q.id];
                       return (
                         <View key={q.id} style={styles.questionCard}>
-                          <Text style={styles.questionIndex}>QUESTION {idx + 1} OF {screenerStudy.questions.length}</Text>
+                          <Text style={styles.questionIndex}>
+                            QUESTION {idx + 1} OF {screenerStudy.questions.length}
+                          </Text>
                           <Text style={styles.questionPrompt}>{q.questionText}</Text>
                           {q.explanation && (
                             <Text style={styles.questionExplanation}>{q.explanation}</Text>
@@ -495,13 +446,14 @@ export default function DiscoverScreen() {
                             <TouchableOpacity
                               style={[styles.choicePill, currentAns === "yes" && styles.choicePillActive]}
                               onPress={() => handleAnswerQuestion(q.id, "yes")}
+                              activeOpacity={0.8}
                             >
                               <MaterialIcons
                                 name={currentAns === "yes" ? "radio-button-checked" : "radio-button-unchecked"}
-                                size={16}
-                                color={currentAns === "yes" ? "#ffffff" : "#64748b"}
+                                size={18}
+                                color={currentAns === "yes" ? "#0284c7" : "#64748b"}
                               />
-                              <Text style={[styles.choicePillText, currentAns === "yes" && styles.choicePillTextActive]}>
+                              <Text style={[styles.choiceText, currentAns === "yes" && styles.choiceTextActive]}>
                                 Yes
                               </Text>
                             </TouchableOpacity>
@@ -509,13 +461,14 @@ export default function DiscoverScreen() {
                             <TouchableOpacity
                               style={[styles.choicePill, currentAns === "no" && styles.choicePillActive]}
                               onPress={() => handleAnswerQuestion(q.id, "no")}
+                              activeOpacity={0.8}
                             >
                               <MaterialIcons
                                 name={currentAns === "no" ? "radio-button-checked" : "radio-button-unchecked"}
-                                size={16}
-                                color={currentAns === "no" ? "#ffffff" : "#64748b"}
+                                size={18}
+                                color={currentAns === "no" ? "#0284c7" : "#64748b"}
                               />
-                              <Text style={[styles.choicePillText, currentAns === "no" && styles.choicePillTextActive]}>
+                              <Text style={[styles.choiceText, currentAns === "no" && styles.choiceTextActive]}>
                                 No
                               </Text>
                             </TouchableOpacity>
@@ -525,11 +478,11 @@ export default function DiscoverScreen() {
                     })}
 
                     <TouchableOpacity
-                      style={styles.submitScreenerBtn}
+                      style={styles.primaryActionButton}
                       onPress={handleSubmitScreener}
                       activeOpacity={0.85}
                     >
-                      <Text style={styles.submitScreenerText}>Submit & Check Qualification</Text>
+                      <Text style={styles.primaryActionText}>Submit & Check Eligibility</Text>
                     </TouchableOpacity>
                   </ScrollView>
                 )}
@@ -543,270 +496,384 @@ export default function DiscoverScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#f8fafc" },
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+  },
 
+  /* Search Header (Uber-inspired) */
   searchContainer: {
     paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingTop: 10,
     paddingBottom: 8,
-    backgroundColor: "#f8fafc",
+    backgroundColor: "#ffffff",
   },
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    gap: 8,
-  },
-  searchInput: { flex: 1, fontSize: 13, color: "#0f172a", fontWeight: "500" },
-
-  categoryScrollWrapper: {
-    backgroundColor: "#f8fafc",
-    paddingBottom: 6,
-  },
-  categoryScroll: { paddingHorizontal: 16, gap: 6 },
-  categoryChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    paddingHorizontal: 11,
-    paddingVertical: 5,
-    borderRadius: 14,
-  },
-  categoryChipActive: { backgroundColor: "#0284c7", borderColor: "#0284c7" },
-  categoryChipText: { fontSize: 12, fontWeight: "600", color: "#64748b" },
-  categoryChipTextActive: { color: "#ffffff", fontWeight: "700" },
-
-  listContainer: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 24 },
-  listHeader: { marginBottom: 8, paddingHorizontal: 2 },
-  listHeaderTitle: { fontSize: 12, fontWeight: "600", color: "#64748b" },
-
-  studyCard: {
-    backgroundColor: "#ffffff",
+    backgroundColor: "#f3f4f6",
     borderRadius: 14,
     paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
+    height: 46,
+    gap: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: "#0f172a",
+    fontWeight: "500",
+  },
+
+  /* Horizontal Filter Chips */
+  filterScrollWrapper: {
+    backgroundColor: "#ffffff",
+    paddingBottom: 10,
+  },
+  filterScroll: {
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "#f3f4f6",
+  },
+  filterChipActive: {
+    backgroundColor: "#0f172a",
+  },
+  filterChipText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#475569",
+  },
+  filterChipTextActive: {
+    color: "#ffffff",
+    fontWeight: "700",
+  },
+
+  /* List & Feed */
+  listContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 4,
+    paddingBottom: 32,
+  },
+  listHeader: {
     marginBottom: 10,
+    paddingHorizontal: 2,
+  },
+  listHeaderText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#64748b",
+  },
+
+  /* Study Card (Instagram-like simplicity & clarity) */
+  card: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
     shadowColor: "#0f172a",
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
     elevation: 1,
   },
-  cardHeader: {
+  cardHeaderRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 6,
+    width: "100%",
   },
-  cardBadgeRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  studyTypeTagText: {
-    fontSize: 10,
+  cardCategory: {
+    fontSize: 11,
     fontWeight: "700",
     color: "#64748b",
-    letterSpacing: 0.4,
+    letterSpacing: 0.5,
+    flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
+    marginRight: 8,
   },
-  remoteTagText: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: "#0284c7",
-    letterSpacing: 0.4,
-  },
-  cardHeaderActions: { flexDirection: "row", alignItems: "center", gap: 6 },
-  bookmarkBtn: { padding: 2 },
-  matchBadge: {
-    flexDirection: "row",
+  bookmarkButton: {
+    width: 32,
+    height: 32,
     alignItems: "center",
-    gap: 3,
-    paddingHorizontal: 7,
-    paddingVertical: 2.5,
-    borderRadius: 10,
+    justifyContent: "center",
+    flexShrink: 0,
   },
-  matchBadgeEmerald: { backgroundColor: "#ecfdf5" },
-  matchBadgeSky: { backgroundColor: "#f0f9ff" },
-  matchBadgeSlate: { backgroundColor: "#f1f5f9" },
-  matchBadgeScore: { fontSize: 11, fontWeight: "700" },
-  matchBadgeScoreEmerald: { color: "#059669" },
-  matchBadgeScoreSky: { color: "#0284c7" },
-  matchBadgeScoreSlate: { color: "#64748b" },
 
-  studyTitle: {
-    fontSize: 15,
+  cardTitle: {
+    fontSize: 17,
     fontWeight: "700",
     color: "#0f172a",
-    lineHeight: 20,
-    marginBottom: 2,
-  },
-  sponsorText: {
-    fontSize: 12,
-    color: "#64748b",
-    fontWeight: "500",
-    marginBottom: 8,
-  },
-
-  metricsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
+    lineHeight: 23,
     marginBottom: 6,
   },
-  metricsPay: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: "#059669",
+  cardSummary: {
+    fontSize: 13,
+    color: "#475569",
+    lineHeight: 18,
+    marginBottom: 12,
   },
-  metricsDot: {
-    fontSize: 12,
-    color: "#cbd5e1",
+
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6,
   },
-  metricsDetail: {
-    fontSize: 12,
+  metaIcon: {
+    marginRight: 6,
+  },
+  locationText: {
+    fontSize: 13,
     fontWeight: "500",
+    color: "#334155",
+    flex: 1,
+  },
+  compensationText: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#0f172a",
+  },
+  commitmentText: {
+    fontSize: 13,
+    fontWeight: "400",
     color: "#475569",
   },
 
-  matchLine: {
+  cardFooter: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    paddingTop: 6,
+    justifyContent: "space-between",
     borderTopWidth: 1,
-    borderTopColor: "#f1f5f9",
+    borderTopColor: "#f3f4f6",
+    paddingTop: 10,
+    marginTop: 8,
   },
-  matchLineText: {
-    fontSize: 11,
-    color: "#059669",
+  learnMoreText: {
+    fontSize: 13,
     fontWeight: "600",
-    flex: 1,
+    color: "#0284c7",
   },
 
-  /* Modals */
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.65)",
-    justifyContent: "flex-end",
-  },
-  sheetContent: {
-    backgroundColor: "#ffffff",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    paddingBottom: 36,
-  },
-  sheetHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 },
-  sheetTitle: { fontSize: 18, fontWeight: "800", color: "#0f172a" },
-  sheetSubtitle: { fontSize: 12, color: "#64748b", marginTop: 2 },
-  sheetPersonasList: { gap: 10, marginBottom: 16 },
-  sheetPersonaCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: "#f8fafc",
-    borderWidth: 1.5,
-    borderColor: "#e2e8f0",
-    padding: 12,
-    borderRadius: 14,
-  },
-  sheetPersonaCardActive: {
-    borderColor: "#0284c7",
-    backgroundColor: "#f0f9ff",
-  },
-  sheetAvatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: "#e2e8f0",
+  /* Empty State */
+  emptyContainer: {
     alignItems: "center",
     justifyContent: "center",
+    paddingVertical: 48,
+    paddingHorizontal: 24,
   },
-  sheetAvatarActive: { backgroundColor: "#0284c7" },
-  sheetAvatarText: { fontSize: 14, fontWeight: "800", color: "#475569" },
-  sheetAvatarTextActive: { color: "#ffffff" },
-  sheetPersonaName: { fontSize: 14, fontWeight: "800", color: "#0f172a" },
-  sheetPersonaDesc: { fontSize: 11, color: "#64748b" },
-  sheetPersonaBadge: { fontSize: 10, color: "#0369a1", fontWeight: "700", marginTop: 2 },
-  sheetCloseBtn: {
-    paddingVertical: 12,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#cbd5e1",
-    borderRadius: 12,
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#0f172a",
+    marginTop: 12,
+    marginBottom: 4,
   },
-  sheetCloseBtnText: { fontSize: 13, fontWeight: "700", color: "#0284c7" },
+  emptySubtitle: {
+    fontSize: 13,
+    color: "#64748b",
+    textAlign: "center",
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  resetButton: {
+    backgroundColor: "#f1f5f9",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 14,
+  },
+  resetButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#0f172a",
+  },
 
+  /* Modal Base */
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.55)",
+    justifyContent: "flex-end",
+  },
   detailModalContent: {
     backgroundColor: "#ffffff",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    padding: 20,
+    paddingTop: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 28,
     maxHeight: "90%",
   },
-  modalHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 },
-  detailModalBadge: { fontSize: 10, fontWeight: "800", color: "#0284c7", letterSpacing: 0.5 },
-  detailModalTitle: { fontSize: 17, fontWeight: "800", color: "#0f172a", marginTop: 3 },
-  detailScroll: { marginBottom: 16 },
-  piBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: "#f0f9ff",
-    padding: 12,
-    borderRadius: 12,
-    marginVertical: 10,
-  },
-  piName: { fontSize: 13, fontWeight: "800", color: "#0f172a" },
-  piTitle: { fontSize: 11, color: "#64748b" },
-  detailSectionTitle: { fontSize: 13, fontWeight: "800", color: "#0f172a", marginTop: 14, marginBottom: 6 },
-  detailBodyText: { fontSize: 13, color: "#334155", lineHeight: 19 },
-  scheduleBox: { backgroundColor: "#f8fafc", padding: 12, borderRadius: 10, borderWidth: 1, borderColor: "#e2e8f0" },
-  scheduleAmount: { fontSize: 18, fontWeight: "900", color: "#059669", marginBottom: 2 },
-  scheduleText: { fontSize: 12, color: "#475569", lineHeight: 16 },
-  facilityBox: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#f8fafc", padding: 10, borderRadius: 10 },
-  facilityText: { fontSize: 12, color: "#334155", flex: 1 },
-  startScreenerBtn: {
-    backgroundColor: "#0284c7",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 14,
-    borderRadius: 14,
-    gap: 6,
-    marginBottom: 10,
-  },
-  startScreenerText: { color: "#ffffff", fontSize: 14, fontWeight: "800" },
-
   screenerModalContent: {
     backgroundColor: "#ffffff",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    padding: 20,
+    paddingTop: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 28,
     maxHeight: "90%",
   },
-  screenerSubtitle: { fontSize: 10, fontWeight: "800", color: "#0284c7", letterSpacing: 0.5 },
-  screenerTitle: { fontSize: 15, fontWeight: "800", color: "#0f172a", marginTop: 2 },
-  screenerScroll: { marginVertical: 12 },
-  screenerIntro: { fontSize: 12, color: "#64748b", marginBottom: 14, lineHeight: 16 },
-  questionCard: {
+
+  modalHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f3f4f6",
+    paddingBottom: 14,
+  },
+  modalCategoryTag: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#64748b",
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#0f172a",
+    lineHeight: 24,
+  },
+  modalCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#f3f4f6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  detailScroll: {
+    marginBottom: 16,
+  },
+  metricTilesRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 16,
+  },
+  metricTile: {
+    flex: 1,
     backgroundColor: "#f8fafc",
     borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "#f1f5f9",
+  },
+  metricTileLabel: {
+    fontSize: 11,
+    color: "#64748b",
+    fontWeight: "500",
+    marginBottom: 2,
+  },
+  metricTileValue: {
+    fontSize: 14,
+    color: "#0f172a",
+    fontWeight: "700",
+  },
+
+  detailSectionTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#0f172a",
+    marginTop: 14,
+    marginBottom: 6,
+  },
+  detailBodyText: {
+    fontSize: 13,
+    color: "#475569",
+    lineHeight: 19,
+  },
+  eligibilityCard: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#f1f5f9",
+    gap: 6,
+  },
+  eligibilityRow: {
+    fontSize: 13,
+    color: "#334155",
+    lineHeight: 18,
+  },
+  disclaimerText: {
+    fontSize: 11,
+    color: "#94a3b8",
+    lineHeight: 16,
+    marginTop: 12,
+    marginBottom: 8,
+    fontStyle: "italic",
+  },
+
+  modalFooter: {
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#f3f4f6",
+  },
+  primaryActionButton: {
+    backgroundColor: "#0284c7",
+    borderRadius: 14,
+    height: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  primaryActionText: {
+    color: "#ffffff",
+    fontSize: 15,
+    fontWeight: "700",
+  },
+
+  /* Pre-screener */
+  screenerScroll: {
+    marginBottom: 12,
+  },
+  screenerIntro: {
+    fontSize: 13,
+    color: "#475569",
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  questionCard: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 14,
     padding: 14,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: "#f1f5f9",
   },
-  questionIndex: { fontSize: 9, fontWeight: "800", color: "#94a3b8", letterSpacing: 0.5, marginBottom: 4 },
-  questionPrompt: { fontSize: 13, fontWeight: "800", color: "#0f172a", lineHeight: 18, marginBottom: 4 },
-  questionExplanation: { fontSize: 11, color: "#64748b", marginBottom: 10 },
-  choiceRow: { flexDirection: "row", gap: 8 },
+  questionIndex: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#64748b",
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  questionPrompt: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#0f172a",
+    lineHeight: 20,
+    marginBottom: 6,
+  },
+  questionExplanation: {
+    fontSize: 12,
+    color: "#64748b",
+    lineHeight: 16,
+    marginBottom: 10,
+  },
+  choiceRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
   choicePill: {
     flex: 1,
     flexDirection: "row",
@@ -814,77 +881,104 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
     backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: "#cbd5e1",
-    paddingVertical: 10,
     borderRadius: 10,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
   },
-  choicePillActive: { backgroundColor: "#0284c7", borderColor: "#0284c7" },
-  choicePillText: { fontSize: 13, fontWeight: "700", color: "#475569" },
-  choicePillTextActive: { color: "#ffffff" },
-  submitScreenerBtn: {
-    backgroundColor: "#0f172a",
-    paddingVertical: 14,
-    borderRadius: 14,
-    alignItems: "center",
-    marginTop: 8,
-    marginBottom: 20,
+  choicePillActive: {
+    borderColor: "#0284c7",
+    backgroundColor: "#f0f9ff",
   },
-  submitScreenerText: { color: "#ffffff", fontSize: 14, fontWeight: "800" },
+  choiceText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#475569",
+  },
+  choiceTextActive: {
+    color: "#0284c7",
+    fontWeight: "700",
+  },
 
-  verdictContainer: { paddingVertical: 20, alignItems: "center" },
+  /* Verdict */
+  verdictContainer: {
+    paddingVertical: 12,
+    gap: 16,
+  },
   verdictBoxSuccess: {
     backgroundColor: "#f0fdf4",
+    borderRadius: 16,
+    padding: 18,
     borderWidth: 1,
     borderColor: "#bbf7d0",
-    borderRadius: 16,
-    padding: 20,
     alignItems: "center",
-    width: "100%",
   },
-  verdictIconCircleSuccess: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+  verdictIconSuccess: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: "#dcfce7",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 12,
+    marginBottom: 10,
   },
-  verdictTitleSuccess: { fontSize: 18, fontWeight: "800", color: "#166534", marginBottom: 6 },
-  verdictTextSuccess: { fontSize: 12, color: "#15803d", textAlign: "center", lineHeight: 17, marginBottom: 14 },
-  verdictDetails: { alignSelf: "stretch", backgroundColor: "#ffffff", padding: 12, borderRadius: 10, gap: 4 },
-  verdictDetailItem: { fontSize: 11, color: "#334155", fontWeight: "600" },
+  verdictTitleSuccess: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#166534",
+    marginBottom: 6,
+    textAlign: "center",
+  },
+  verdictTextSuccess: {
+    fontSize: 13,
+    color: "#15803d",
+    textAlign: "center",
+    lineHeight: 18,
+    marginBottom: 8,
+  },
+  verdictSubtext: {
+    fontSize: 12,
+    color: "#166534",
+    textAlign: "center",
+    lineHeight: 16,
+  },
 
   verdictBoxFailure: {
     backgroundColor: "#fef2f2",
+    borderRadius: 16,
+    padding: 18,
     borderWidth: 1,
     borderColor: "#fecaca",
-    borderRadius: 16,
-    padding: 20,
     alignItems: "center",
-    width: "100%",
   },
-  verdictIconCircleFailure: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+  verdictIconFailure: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: "#fee2e2",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 12,
+    marginBottom: 10,
   },
-  verdictTitleFailure: { fontSize: 18, fontWeight: "800", color: "#991b1b", marginBottom: 6 },
-  verdictTextFailure: { fontSize: 12, color: "#b91c1c", textAlign: "center", lineHeight: 17, marginBottom: 10 },
-  disqualificationBullet: { fontSize: 11, color: "#7f1d1d", alignSelf: "flex-start", marginBottom: 4 },
-
-  verdictDoneBtn: {
-    backgroundColor: "#0f172a",
-    paddingVertical: 14,
-    borderRadius: 14,
-    alignItems: "center",
-    marginTop: 20,
-    width: "100%",
+  verdictTitleFailure: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#991b1b",
+    marginBottom: 6,
+    textAlign: "center",
   },
-  verdictDoneBtnText: { color: "#ffffff", fontSize: 14, fontWeight: "800" },
+  verdictTextFailure: {
+    fontSize: 13,
+    color: "#b91c1c",
+    textAlign: "center",
+    lineHeight: 18,
+    marginBottom: 8,
+  },
+  disqualificationBullet: {
+    fontSize: 12,
+    color: "#7f1d1d",
+    lineHeight: 16,
+    textAlign: "left",
+    alignSelf: "flex-start",
+  },
 });

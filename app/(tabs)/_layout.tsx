@@ -46,79 +46,38 @@ function HeaderAuthButton() {
     );
   }
 
-  // Consumer mode: Notification Bell + Persona Switcher
+  // Consumer mode: Clean Notification Bell
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginRight: 12 }}>
+    <View style={{ flexDirection: "row", alignItems: "center", marginRight: 16 }}>
       {/* Notification Bell */}
       <TouchableOpacity
         onPress={() => setNotificationModalVisible(true)}
         style={{
-          padding: 6,
-          position: "relative",
-          borderRadius: 10,
+          width: 38,
+          height: 38,
+          borderRadius: 19,
           backgroundColor: "#f8fafc",
           borderWidth: 1,
-          borderColor: "#e2e8f0",
+          borderColor: "#f1f5f9",
+          alignItems: "center",
+          justifyContent: "center",
         }}
         activeOpacity={0.7}
       >
-        <MaterialIcons name="notifications-none" size={19} color="#0f172a" />
+        <MaterialIcons name="notifications-none" size={20} color="#0f172a" />
         {unreadNotificationCount > 0 && (
           <View
             style={{
               position: "absolute",
-              top: -2,
-              right: -2,
+              top: 6,
+              right: 6,
               backgroundColor: "#ea580c",
-              borderRadius: 8,
-              minWidth: 16,
-              height: 16,
-              alignItems: "center",
-              justifyContent: "center",
-              paddingHorizontal: 3,
+              borderRadius: 5,
+              width: 8,
+              height: 8,
             }}
-          >
-            <Text style={{ color: "#ffffff", fontSize: 9, fontWeight: "900" }}>
-              {unreadNotificationCount}
-            </Text>
-          </View>
+          />
         )}
-      </TouchableOpacity>
-
-      {/* Persona Pill */}
-      <TouchableOpacity
-        onPress={() => openLoginModal("consumer")}
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 4,
-          backgroundColor: "#f0f9ff",
-          paddingHorizontal: 8,
-          paddingVertical: 4,
-          borderRadius: 16,
-          borderWidth: 1,
-          borderColor: "#bae6fd",
-        }}
-        activeOpacity={0.7}
-      >
-        <View
-          style={{
-            width: 18,
-            height: 18,
-            borderRadius: 9,
-            backgroundColor: "#0284c7",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Text style={{ fontSize: 9, fontWeight: "800", color: "#ffffff" }}>
-            {currentProfile.avatarInitials}
-          </Text>
-        </View>
-        <Text style={{ fontSize: 11, fontWeight: "700", color: "#0284c7" }}>
-          {currentProfile.fullName.split(" ")[0]}
-        </Text>
-        <MaterialIcons name="unfold-more" size={12} color="#0284c7" />
       </TouchableOpacity>
 
       {/* Notification Center Modal */}
@@ -304,14 +263,14 @@ function TabsContent() {
             backgroundColor: "#ffffff",
             borderTopColor: "#e2e8f0",
             borderTopWidth: 1,
-            height: Platform.OS === "ios" ? 88 : 64,
-            paddingBottom: Platform.OS === "ios" ? 28 : 10,
-            paddingTop: 8,
+            height: Platform.OS === "ios" ? 88 : 68,
+            paddingBottom: Platform.OS === "ios" ? 28 : 8,
+            paddingTop: 6,
           },
           tabBarLabelStyle: {
             fontSize: 11,
             fontWeight: "600",
-            marginTop: -2,
+            marginBottom: 2,
           },
         }}
       >
@@ -320,7 +279,6 @@ function TabsContent() {
           options={{
             title: "Discover",
             headerTitle: "Discover",
-            href: isPIMode ? null : "/(tabs)",
             tabBarIcon: ({ color, size }) => (
               <MaterialIcons name="explore" size={size || 24} color={color} />
             ),
@@ -331,7 +289,6 @@ function TabsContent() {
           options={{
             title: "My Studies",
             headerTitle: "My Studies",
-            href: isPIMode ? null : "/(tabs)/applications",
             tabBarIcon: ({ color, size }) => (
               <MaterialIcons name="assignment-turned-in" size={size || 24} color={color} />
             ),
@@ -342,7 +299,6 @@ function TabsContent() {
           options={{
             title: "Profile",
             headerTitle: "Profile",
-            href: isPIMode ? null : "/(tabs)/profile",
             tabBarIcon: ({ color, size }) => (
               <MaterialIcons name="person" size={size || 24} color={color} />
             ),
@@ -353,7 +309,7 @@ function TabsContent() {
           options={{
             title: "PI Portal",
             headerTitle: "PI Workspace",
-            href: !isPIMode ? null : "/(tabs)/researcher",
+            href: isPIMode ? "/researcher" : null,
             tabBarIcon: ({ color, size }) => (
               <MaterialIcons
                 name="medical-services"
